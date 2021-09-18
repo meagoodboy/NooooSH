@@ -45,6 +45,7 @@ char LWD[1000];
 
 int runcommand(char* words[] , int word_count);
 
+// initialise history
 int initHistory(){
     //malloc hisory
     for(int i = 0; i< 20 ; i++){
@@ -75,7 +76,7 @@ int initHistory(){
     return 0;
 }
 
-
+// add command to history and update file
 int addHistory(char* words[], int word_count){
     if(history_count < 20){ 
         strcpy(history_list[history_count],words[0]);
@@ -109,6 +110,7 @@ int addHistory(char* words[], int word_count){
     return 0;
 }
 
+// function to print history
 int getHistory(char* words[], int word_count){
     if(word_count > 2){
         printf("\nhistory : invalid no of arguments");
@@ -185,6 +187,14 @@ int getPWD(){
     return errno;
 }
 
+// kill all child process
+int killall(){
+    for(int i = 0 ; i < total_children_bg ; i++){
+        kill(cp[i].child_id, SIGKILL);
+    }
+    return 0;
+}
+
 // function to format input to the terminal
 int getINPUT(char* input_str){
 
@@ -193,6 +203,7 @@ int getINPUT(char* input_str){
     size_t bufr_size_m = 0;                           
     int chk = getline(&buffer, &bufr_size_m, stdin);
     if(chk == -1){
+        killall();
         return 9;
     }
     // printf("%s", buffer);
@@ -201,6 +212,7 @@ int getINPUT(char* input_str){
     return errno;
 }
 
+// cd command
 int cd(char* words[] , int word_count){
     
     char* newdir = (char *) malloc (INP_SIZE);
@@ -234,6 +246,7 @@ int cd(char* words[] , int word_count){
     return 0;
 }
 
+// to return the permissions of a given file
 char* permissions(char* file_name){
     struct stat st;
     mode_t perm = st.st_mode;
@@ -251,6 +264,7 @@ char* permissions(char* file_name){
     return permission_str;
 }
 
+// to get the correct path in file name
 char* file_name_filter(char* file, int home_chk){
     char* final_name = (char *) malloc(INP_SIZE);
     strcpy(final_name, HOME);
@@ -266,6 +280,7 @@ char* file_name_filter(char* file, int home_chk){
     return final_name;
 }
 
+// print the ls -l
 int print_l_ls(char* file_name , char* dir_name){
     struct stat f_info;
     char* final_dir_name = (char*) malloc (INP_SIZE);
@@ -289,6 +304,7 @@ int print_l_ls(char* file_name , char* dir_name){
     return 0;
 }
 
+// funtion to print normal ls
 int printls(int a , int l, int relative,  char* f_name){
     
     char* file_name = file_name_filter(f_name , relative);
@@ -327,6 +343,7 @@ int printls(int a , int l, int relative,  char* f_name){
     return 0;
 }
 
+// function to get all the files
 int ls(char* words[] , int word_count){
 
     int a_flag = 0, l_flag = 0, relative = 1;
@@ -371,6 +388,7 @@ int ls(char* words[] , int word_count){
     return 0;
 }
 
+// print pwd
 int pwd(char* words[] , int word_count){
     if(word_count == 1){
         printf("\n%s", PWD);
@@ -381,6 +399,7 @@ int pwd(char* words[] , int word_count){
     return 0;
 }
 
+// echo command
 int echo(char* words[] , int word_count){
     int index = 1;
     while(index < word_count)
@@ -392,6 +411,7 @@ int echo(char* words[] , int word_count){
     return 0;
 }
 
+// repeat command
 int repeat(char* words[] , int word_count){
     
     if(word_count < 3){
@@ -407,7 +427,7 @@ int repeat(char* words[] , int word_count){
     return 0;
 }
 
-/// finish these in 1 hour
+/// to add a child process
 int addchild(int pid, char* command){
     if (total_children_bg > 99){
         printf("\nadd process : too many children process, no space in pool");
@@ -420,7 +440,7 @@ int addchild(int pid, char* command){
 
     return 0;
 }
-
+// tto remove a child process
 int removechild(int pid){
     int i;
     int found = 0;
@@ -446,6 +466,7 @@ int removechild(int pid){
     return 0;
 }
 
+// to handle bg signals
 void signalhandler(int signal){
     
     pid_t pid;
@@ -467,6 +488,7 @@ void signalhandler(int signal){
 
 }
 
+// run foreground
 int fg(char* words[] , int word_count){
     
     int pid = fork();
@@ -488,6 +510,7 @@ int fg(char* words[] , int word_count){
     return 0;
 }
 
+// run background
 int bg(char* words[] , int word_count){
     
     int v_words = word_count;
@@ -552,6 +575,7 @@ int bg(char* words[] , int word_count){
     return 0;
 }
 
+// print process info
 int pinfo(char* words[] , int word_count){
     
     pid_t pid;
@@ -603,6 +627,7 @@ int pinfo(char* words[] , int word_count){
     return 0;
 }
 
+// run all commands
 int runcommand(char* words[] , int word_count){
     int rval = 0;
     if(strcmp(words[0], "cd") == 0){
@@ -716,7 +741,10 @@ int main(){
     char* input = (char*) malloc (INP_SIZE);
     int chk2 = 0;
     while(1){
+
+        // to capture ctrl + c
         addsignal();
+        // to print prompt
         getPWD();
         
         chk2 = getINPUT(input);
