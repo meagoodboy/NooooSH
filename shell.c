@@ -58,8 +58,10 @@ int initHistory(){
         history_count = 0;
     }
     else{
+        // printf("\nHistory iniitalised sucessfullly here");
         history_count = 0;
         fread(temp_history, 1, 20 * INP_SIZE, history_loc);
+        // printf("\nhere : %s", temp_history);
         history_pointer = strtok(temp_history,"\n");
         while(history_pointer){
             strcpy(history_list[history_count], history_pointer);
@@ -73,23 +75,6 @@ int initHistory(){
     return 0;
 }
 
-int closeHistory(){
-    
-    char* all_history = (char*) malloc (20 * INP_SIZE);
-    for(int i = 0 ;i < history_count; i++){
-        strcat(all_history, history_list[i]);
-        strcat(all_history, "\n");
-    }
-    FILE *history_loc;
-    history_loc = fopen("/var/tmp/shell_history.txt", "w");
-    fwrite(all_history, 1, strlen(all_history) , history_loc);
-    fclose(history_loc);
-    free(all_history);
-    for(int i = 0; i< 20 ; i++){
-        free(history_list[i]);
-    }
-    return 0;
-}
 
 int addHistory(char* words[], int word_count){
     if(history_count < 20){ 
@@ -111,6 +96,16 @@ int addHistory(char* words[], int word_count){
 
         }
     }
+    char* all_history = (char*) malloc (20 * INP_SIZE);
+    for(int i = 0 ;i < history_count; i++){
+        strcat(all_history, history_list[i]);
+        strcat(all_history, "\n");
+    }
+    FILE *history_loc;
+    history_loc = fopen("/var/tmp/shell_history.txt", "w");
+    fwrite(all_history, 1, strlen(all_history) , history_loc);
+    fclose(history_loc);
+    free(all_history);
     return 0;
 }
 
@@ -147,9 +142,10 @@ int initialise(){
     printf("\n ************************************************************ \n\n");
     reset_color();
     initHistory();
-    strcpy(USER, getenv("USER"));
-    strcpy(HOME, getenv("HOME"));
     getcwd(PWD, sizeof(PWD));
+    strcpy(USER, getenv("USER"));
+    strcpy(HOME, PWD);
+    
     strcpy(LWD, PWD);
     gethostname(HOST, sizeof(HOST));
     return errno;
@@ -195,7 +191,10 @@ int getINPUT(char* input_str){
 
     char* buffer = NULL;     
     size_t bufr_size_m = 0;                           
-    getline(&buffer, &bufr_size_m, stdin);
+    int chk = getline(&buffer, &bufr_size_m, stdin);
+    if(chk == -1){
+        return 9;
+    }
     // printf("%s", buffer);
     // perror("lol");
     strcpy(input_str, buffer);
@@ -297,6 +296,7 @@ int printls(int a , int l, int relative,  char* f_name){
 
     if (open_dir == NULL){
         perror("\nls");
+        printf("\n%s", file_name);
         return 1;
     }
     
@@ -424,9 +424,9 @@ int addchild(int pid, char* command){
 int removechild(int pid){
     int i;
     int found = 0;
-    printf("\nremovechilde children : %d", total_children_bg );
+    // printf("\nremovechilde children : %d", total_children_bg );
     for(i = 0; i< total_children_bg ; i++){
-        printf("\nstruct : %d", cp[i].child_id);
+        // printf("\nstruct : %d", cp[i].child_id);
         if(pid == cp[i].child_id){
             found = 1;
             break;
@@ -450,10 +450,10 @@ void signalhandler(int signal){
     
     pid_t pid;
     int pstat;
-    printf("Hewewe");
+    // printf("Hewewe");
     while ((pid = waitpid( -1, &pstat, WNOHANG)) > 0){
         pstat = WIFEXITED(pstat);
-        printf("\nlollbahjbd hid");
+        // printf("\nlollbahjbd hid");
         for (int i = 0; i < total_children_bg ; i++){
             if( cp[i].child_id == pid){
                 printf("\n%d exited  %s", pid , (pstat == 0 )? "Normally" : "Abnormally");
@@ -474,7 +474,7 @@ int fg(char* words[] , int word_count){
         perror("\nforking ");
         return errno;
     }
-    printf("\n fg  : %s", words[0]);
+    // printf("\n fg  : %s", words[0]);
     if(pid == 0){
         int status = execvp(words[0], words);
         if(status < 0){
@@ -491,23 +491,33 @@ int fg(char* words[] , int word_count){
 int bg(char* words[] , int word_count){
     
     int v_words = word_count;
-    printf("\n bg  : %s", words[0]);
+    // printf("\n bg  : %s", words[0]);
+    char* temp_words[INP_SIZE];
+    for (int i = 0; i < INP_SIZE ; i ++){
+        temp_words[i] = (char*) malloc(INP_SIZE);
+    }
     
     words[v_words - 1][strlen(words[v_words - 1]) - 1] = '\0';
 
-
     if (strcmp(words[v_words - 1],"\0") == 0){
-        printf("\n bg : here");
-        words[v_words - 1] = NULL;
+        for(int i = 0; i < v_words - 1; i++){
+            strcpy(temp_words[i], words[i]);
+        }
+        temp_words[v_words - 1] = NULL;
         v_words --;
     }
-    printf("\n bg : heretoo");
-    for (int k =0 ; k < v_words; k++)
-    {
-        if(words[k] != NULL)
-        printf("\nbg words: %s", words[k]);
+    else{
+        for(int i = 0; i < v_words ; i++){
+            strcpy(temp_words[i], words[i]);
+        }
+        temp_words[v_words] = NULL;
     }
-    printf("\n bg %s : here3", words[v_words - 1]);
+    // for (int k =0 ; k < v_words; k++)
+    // {
+    //     if(words[k] != NULL)
+    //     printf("\nbg words: %s", words[k]);
+    // }
+    // printf("\n bg %s : here3", words[v_words - 1]);
     int pid = fork();
 
     if( pid < 0){
@@ -515,15 +525,15 @@ int bg(char* words[] , int word_count){
         return errno;
     }
     if(pid == 0){
-        printf("\n bg : here4");
-        int status = execvp(words[0], words);
+        // printf("\n bg : here4");
+        int status = execvp(temp_words[0], temp_words);
         if(status < 0){
             perror("\nexecvp ");
             return 1;
         }
 
     }else{
-        printf("\n bg : here5");
+        printf("\n bg pid : %d " ,pid);
         children_pid[total_children_bg] = pid;
         int errorchk = addchild(pid, words[0]);
         if(errorchk != 0){
@@ -600,7 +610,6 @@ int runcommand(char* words[] , int word_count){
     }
     else if(strcmp(words[0], "exit") == 0){
         addHistory(words, word_count);
-        closeHistory();
         exit(0);
     }
     else if(strcmp(words[0], "ls") == 0){
@@ -649,7 +658,7 @@ int manageINPUT(char* input){
         // printf("\n%d : %s", i , tokenised_input[i]);
     }
     if(tokenised_input[0] == NULL && i == 0 ){
-        printf("tokenised input last entry is o");
+        // printf("tokenised input last entry is 0");
         return 0;
     }
 
@@ -674,12 +683,12 @@ int manageINPUT(char* input){
             // printf("\n%d , %d : %s",words, i , words_in_line[words]);
         }
         if(words == 0){
-            printf("input : no entry");
+            // printf("input : no entry");
             continue;
         }   
 
         int x = runcommand(words_in_line, words);
-        if(x == 0);
+        if(x == 0)
             addHistory(words_in_line, words);
 
     }
@@ -688,18 +697,34 @@ int manageINPUT(char* input){
 
 }
 
+void handler(){
+    ;
+}
+
+void addsignal(){
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = handler;
+    action.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &action, NULL);
+}
+
 int main(){
 
 
     initialise();
     char* input = (char*) malloc (INP_SIZE);
-    
+    int chk2 = 0;
     while(1){
-        
+        addsignal();
         getPWD();
         
-        getINPUT(input);
-        printf("\n%s", input);
+        chk2 = getINPUT(input);
+        if (chk2 == 9){ 
+            // printf("here");
+            break;
+        }
+        // printf("\n%s", input);
         if(manageINPUT(input) != 0){
             printf("command : error");
         }
