@@ -36,9 +36,9 @@ struct child_process{
     int child_id;
 }cp[100];
 extern int errno;
-char USER[100];
-char HOST[100];
-char HOME[100];
+char USER[1000];
+char HOST[1000];
+char HOME[1000];
 char PWD[1000];
 char LWD[1000];
 
@@ -228,20 +228,24 @@ int cd(char* words[] , int word_count){
     else{
         if(words[1][0] == '~'){
             strcpy(newdir, HOME);
-            printf("\n%s", HOME);
+            printf("~\n");
             strcat(newdir,words[1] + 1);
         }
         else if(words[1][0] == '-'){
             strcpy(newdir, LWD);
-            printf("\n%s", newdir);
+            // printf("%s    %s\n", formatpath(), PWD);
         }
         else{
             strcat(newdir, words[1]);
         }
-    printf("\n%s", newdir);
-    strcpy(LWD, PWD);
-    int x = chdir(newdir);
-    if ( x < 0 ) perror("cd ");
+    // printf("\n%s", newdir);
+        strcpy(LWD, PWD);
+        int x = chdir(newdir);
+        getcwd(PWD, sizeof(PWD));
+        if(words[1][0] == '-'){
+            printf("%s\n", formatpath());
+        }
+        if ( x < 0 ) perror("cd ");
     }
     return 0;
 }
@@ -249,18 +253,21 @@ int cd(char* words[] , int word_count){
 // to return the permissions of a given file
 char* permissions(char* file_name){
     struct stat st;
+    stat(file_name,&st);
     mode_t perm = st.st_mode;
-    char* permission_str = (char*) malloc(10);
-    permission_str[0] = (perm & S_IRUSR) ? 'r' : '-';
-    permission_str[1] = (perm & S_IWUSR) ? 'w' : '-';
-    permission_str[2] = (perm & S_IXUSR) ? 'x' : '-';
-    permission_str[3] = (perm & S_IRGRP) ? 'r' : '-';
-    permission_str[4] = (perm & S_IWGRP) ? 'w' : '-';
-    permission_str[5] = (perm & S_IXGRP) ? 'x' : '-';
-    permission_str[6] = (perm & S_IROTH) ? 'r' : '-';
-    permission_str[7] = (perm & S_IWOTH) ? 'w' : '-';
-    permission_str[8] = (perm & S_IXOTH) ? 'x' : '-';
-    permission_str[9] = '\0';
+    // printf("\n permisssions :  %s", file_name);
+    char* permission_str = (char*) malloc(11);
+    permission_str[0] = (S_ISDIR(perm)) ? 'd' : '-';
+    permission_str[1] = (perm & S_IRUSR) ? 'r' : '-';
+    permission_str[2] = (perm & S_IWUSR) ? 'w' : '-';
+    permission_str[3] = (perm & S_IXUSR) ? 'x' : '-';
+    permission_str[4] = (perm & S_IRGRP) ? 'r' : '-';
+    permission_str[5] = (perm & S_IWGRP) ? 'w' : '-';
+    permission_str[6] = (perm & S_IXGRP) ? 'x' : '-';
+    permission_str[7] = (perm & S_IROTH) ? 'r' : '-';
+    permission_str[8] = (perm & S_IWOTH) ? 'w' : '-';
+    permission_str[9] = (perm & S_IXOTH) ? 'x' : '-';
+    permission_str[10] = '\0';
     return permission_str;
 }
 
@@ -286,6 +293,7 @@ int print_l_ls(char* file_name , char* dir_name){
     char* final_dir_name = (char*) malloc (INP_SIZE);
     strcpy(final_dir_name, file_name);
     strcat(final_dir_name, "/");
+    // int block_count = 0;
     strcat(final_dir_name , dir_name);
     if( stat(final_dir_name, &f_info) != -1){
         struct group *group_d = getgrgid(f_info.st_gid);
@@ -296,7 +304,10 @@ int print_l_ls(char* file_name , char* dir_name){
             time_format = "%b %d %Y";
         }
         strftime(time_c, 50, "%b %d %R", localtime( &f_info.st_mtime));
+        // printf("\n%s   %s", final_dir_name, permissions(final_dir_name));
+        // block_count += f_info.st_blocks;
         printf("\n%s %ld %s %s %ld %s %s", permissions(final_dir_name), f_info.st_nlink , passwd_d->pw_name, group_d->gr_name , f_info.st_size , time_c , dir_name);
+        // printf(" %d", block_count);
     }
     else{
         printf("\n name :  %s", final_dir_name);
@@ -304,20 +315,73 @@ int print_l_ls(char* file_name , char* dir_name){
     return 0;
 }
 
+int get_l_ls_total(char* file_name , char* dir_name){
+    struct stat f_info;
+    char* final_dir_name = (char*) malloc (INP_SIZE);
+    strcpy(final_dir_name, file_name);
+    strcat(final_dir_name, "/");
+    int block_count = 0;
+    strcat(final_dir_name , dir_name);
+    if( stat(final_dir_name, &f_info) != -1){
+        block_count = f_info.st_blocks;
+    }
+    else{
+        printf("\n name :  %s", final_dir_name);
+    }
+    return block_count;
+}
+
+
 // funtion to print normal ls
 int printls(int a , int l, int relative,  char* f_name){
     
     char* file_name = file_name_filter(f_name , relative);
     DIR *open_dir = opendir(file_name);
-
+    DIR *count_dir = opendir(file_name);
     if (open_dir == NULL){
         perror("\nls");
         printf("\n%s", file_name);
         return 1;
     }
     
-    printf("\n%s", file_name);
+    // printf("\n%s", file_name);
     struct dirent *sub_files = readdir(open_dir);
+    struct dirent *count_file = readdir(count_dir);
+//     struct stat fl;
+//     int size = 0;
+//     if (count_dir)
+//     {
+//         while ((count_file = readdir(count_dir)) != NULL)
+//         {
+//             size++;
+//         }
+
+//         closedir(count_dir);
+//   }
+//     stat(file_name, &fl);
+    if( l != 0 ){
+        int total_blk = 0;
+        while(count_file != NULL){
+
+            if(a == 0 && l == 1 ){
+                if(count_file->d_name[0] != '.'){
+                    total_blk += get_l_ls_total(file_name, count_file->d_name);
+
+                }
+            }
+            else if( a == 1 && l == 1){
+                total_blk += get_l_ls_total(file_name, count_file->d_name);
+            }
+
+
+            // printf("\n %d", total_blk);
+            count_file = readdir(count_dir);
+        } 
+
+        printf("total %d", total_blk/2);
+    }
+
+
     while(sub_files != NULL){
         if(a == 1 && l == 0){
             printf("\n%s", sub_files->d_name);
@@ -385,13 +449,14 @@ int ls(char* words[] , int word_count){
         // printf("\nchk : %s ,a :  %d ,l :%d ,rel :  %d,fc:  %d ", file_names[i], a_flag, l_flag, relative , file_count);
         printls( a_flag, l_flag , relative ,  file_names[i] );
     }
+    printf("\n");
     return 0;
 }
 
 // print pwd
 int pwd(char* words[] , int word_count){
     if(word_count == 1){
-        printf("\n%s", PWD);
+        printf("%s\n", PWD);
     }
     else{
         printf("pwd : too many arguments");
@@ -477,7 +542,7 @@ void signalhandler(int signal){
         // printf("\nlollbahjbd hid");
         for (int i = 0; i < total_children_bg ; i++){
             if( cp[i].child_id == pid){
-                printf("\n%d exited  %s", pid , (pstat == 0 )? "Normally" : "Abnormally");
+                printf("\n%s with pid %d exited %s",cp[i].childname, pid , (pstat == 1 )? "Normally" : "Abnormally");
                 removechild(pid);
                 
             }
@@ -492,6 +557,7 @@ void signalhandler(int signal){
 int fg(char* words[] , int word_count){
     
     int pid = fork();
+    int status_w;
     if( pid < 0){
         perror("\nforking ");
         return errno;
@@ -505,7 +571,7 @@ int fg(char* words[] , int word_count){
         }
 
     }else{
-        wait(NULL);
+        waitpid(pid, &status_w ,WUNTRACED);
     }
     return 0;
 }
@@ -556,7 +622,7 @@ int bg(char* words[] , int word_count){
         }
 
     }else{
-        printf("\n bg pid : %d " ,pid);
+        printf("\n%d " ,pid);
         children_pid[total_children_bg] = pid;
         int errorchk = addchild(pid, words[0]);
         if(errorchk != 0){
