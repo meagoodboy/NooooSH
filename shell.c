@@ -1,49 +1,21 @@
-#include <ctype.h>
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <grp.h>
-#include <limits.h>
-#include <pwd.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
-#include <syscall.h>
-#include <time.h>
-#include <unistd.h>
+#include "shell.h"
+#include "commands/commands.h"
 
-#define clear printf("\033[H\033[J")
-#define red() printf("\033[0;31m")
-#define yellow() printf("\033[0;33m")
-#define green() printf("\033[0;31m")
-#define blue() printf("\033[0;34m")
-#define purple() printf("\033[0;35m")
-#define cyan() printf("\033[0;36m")
-#define reset_color() printf("\033[0m")
-#define INP_SIZE 4096
 
 int total_children_bg = 0;
 int history_count = 0;
 char* history_list[20] = {NULL};
 int children_pid[1000];
-struct child_process{
-    char childname[1000];
-    int child_id;
-}cp[100];
-extern int errno;
+cp_struct cp[100];
+int errno;
 char USER[1000];
 char HOST[1000];
 char HOME[1000];
 char PWD[1000];
 char LWD[1000];
+int curr_fgp = -1;
 
 
-int runcommand(char* words[] , int word_count);
 
 // initialise history
 int initHistory(){
@@ -204,7 +176,8 @@ int getINPUT(char* input_str){
     int chk = getline(&buffer, &bufr_size_m, stdin);
     if(chk == -1){
         killall();
-        return 9;
+        exit(0);
+        // return 9;
     }
     // printf("%s", buffer);
     // perror("lol");
@@ -347,18 +320,6 @@ int printls(int a , int l, int relative,  char* f_name){
     // printf("\n%s", file_name);
     struct dirent *sub_files = readdir(open_dir);
     struct dirent *count_file = readdir(count_dir);
-//     struct stat fl;
-//     int size = 0;
-//     if (count_dir)
-//     {
-//         while ((count_file = readdir(count_dir)) != NULL)
-//         {
-//             size++;
-//         }
-
-//         closedir(count_dir);
-//   }
-//     stat(file_name, &fl);
     if( l != 0 ){
         int total_blk = 0;
         while(count_file != NULL){
@@ -464,33 +425,6 @@ int pwd(char* words[] , int word_count){
     return 0;
 }
 
-// echo command
-int echo(char* words[] , int word_count){
-    int index = 1;
-    while(index < word_count)
-    {
-        printf("%s ",words[index]);
-        index++;
-    }
-    printf("\n");
-    return 0;
-}
-
-// repeat command
-int repeat(char* words[] , int word_count){
-    
-    if(word_count < 3){
-        printf("repeat : argument error");
-        return 1;
-    }
-
-    int i = atoi(words[1]);
-    for(int j = 0; j < i; j++){
-        runcommand(words + 2, word_count -2);
-    }
-
-    return 0;
-}
 
 /// to add a child process
 int addchild(int pid, char* command){
@@ -553,28 +487,6 @@ void signalhandler(int signal){
 
 }
 
-// run foreground
-int fg(char* words[] , int word_count){
-    
-    int pid = fork();
-    int status_w;
-    if( pid < 0){
-        perror("\nforking ");
-        return errno;
-    }
-    // printf("\n fg  : %s", words[0]);
-    if(pid == 0){
-        int status = execvp(words[0], words);
-        if(status < 0){
-            perror("\nexecvp ");
-            return 1;
-        }
-
-    }else{
-        waitpid(pid, &status_w ,WUNTRACED);
-    }
-    return 0;
-}
 
 // run background
 int bg(char* words[] , int word_count){
@@ -601,12 +513,6 @@ int bg(char* words[] , int word_count){
         }
         temp_words[v_words] = NULL;
     }
-    // for (int k =0 ; k < v_words; k++)
-    // {
-    //     if(words[k] != NULL)
-    //     printf("\nbg words: %s", words[k]);
-    // }
-    // printf("\n bg %s : here3", words[v_words - 1]);
     int pid = fork();
 
     if( pid < 0){
@@ -696,37 +602,7 @@ int pinfo(char* words[] , int word_count){
 // run all commands
 int runcommand(char* words[] , int word_count){
     int rval = 0;
-    if(strcmp(words[0], "cd") == 0){
-        rval = cd(words, word_count);
-    }
-    else if(strcmp(words[0], "exit") == 0){
-        addHistory(words, word_count);
-        exit(0);
-    }
-    else if(strcmp(words[0], "ls") == 0){
-        rval = ls(words, word_count);
-    }
-    else if(strcmp(words[0], "pwd") == 0){
-        rval = pwd(words, word_count);
-    }
-    else if(strcmp(words[0], "echo") == 0){
-        rval = echo(words, word_count);
-    }
-    else if(strcmp(words[0], "repeat") == 0){
-        rval = repeat(words, word_count);
-    }
-    else if(strcmp(words[0], "pinfo") == 0){
-        rval = pinfo(words, word_count);
-    }
-    else if(strcmp(words[0], "history") == 0){
-        rval = getHistory(words, word_count);
-    }
-    else if(strcmp(words[word_count - 1] + strlen(words[word_count - 1]) - 1, "&" ) == 0){
-        rval = bg(words, word_count);
-    }
-    else{
-        rval = fg(words, word_count);
-    }
+    rval = runcommand_f(words, word_count);
     
 
     return rval;
@@ -758,46 +634,81 @@ int manageINPUT(char* input){
     for(i = 0; i < inp_commands; i++){
         char* linewise_tok_input = tokenised_input[i];
         // printf("\n%d : %s", i , linewise_tok_input);
-        char* words_in_line[INP_SIZE];
-        
-        for(int j = 0; j < INP_SIZE; j++){
-            // words_in_line[j] = (char *) malloc (INP_SIZE);
-            // strcpy(words_in_line[j],"");
-            words_in_line[j] = NULL;
-        }
-        char* word_pointer = strtok(linewise_tok_input, " \t\n");
 
-        int words;
-        for ( words = 0; word_pointer ; words++ ){
-            words_in_line[words] = word_pointer;
-            word_pointer = strtok(NULL, " \t\n");
-            // printf("\n%d , %d : %s",words, i , words_in_line[words]);
+
+        // checking for pipes
+        // int pipecomm = 0;
+        int pipec = 0;
+        // char* pipepointer = strtok(linewise_tok_input, "|");
+        int len = strlen(linewise_tok_input);
+        for(int m = 0; m < len; m++){
+            if(linewise_tok_input[m] == '|'){
+                pipec ++;
+            }
         }
-        if(words == 0){
-            // printf("input : no entry");
+
+        if(pipec > 0){
+            handlepipes(linewise_tok_input, pipec);
             continue;
-        }   
+        }
+        else
+        {
+            char* words_in_line[INP_SIZE];
+            
+            for(int j = 0; j < INP_SIZE; j++){
+                // words_in_line[j] = (char *) malloc (INP_SIZE);
+                // strcpy(words_in_line[j],"");
+                words_in_line[j] = NULL;
+            }
+            char* word_pointer = strtok(linewise_tok_input, " \t\n");
 
-        int x = runcommand(words_in_line, words);
-        if(x == 0)
-            addHistory(words_in_line, words);
+            int words;
+            for ( words = 0; word_pointer ; words++ ){
+                words_in_line[words] = word_pointer;
+                word_pointer = strtok(NULL, " \t\n");
+                // printf("\n%d , %d : %s",words, i , words_in_line[words]);
+            }
+            if(words == 0){
+                // printf("input : no entry");
+                continue;
+            }   
 
+            int x = runcommand(words_in_line, words);
+            if(x == 0)
+                addHistory(words_in_line, words);
+        }
     }
 
     return 0;
 
 }
 
-void handler(){
+void inthandler(){
     ;
+}
+
+void stophandler(){
+    // printf("\nstop handler");
+    pid_t pid = fgpi.child_id;
+    if (pid != -1){
+    kill(pid, SIGTSTP);
+    addchild(pid , fgpi.childname);
+    }
+    // printf("\n in stop : %d", pid);
 }
 
 void addsignal(){
     struct sigaction action;
     memset(&action, 0, sizeof(action));
-    action.sa_handler = handler;
+    action.sa_handler = inthandler;
     action.sa_flags = SA_RESTART;
     sigaction(SIGINT, &action, NULL);
+    
+    struct sigaction action2;
+    memset(&action2, 0, sizeof(action2));
+    action2.sa_handler = stophandler;
+    action2.sa_flags = SA_RESTART;
+    sigaction(SIGTSTP, &action2, NULL);
 }
 
 int main(){
@@ -807,7 +718,7 @@ int main(){
     char* input = (char*) malloc (INP_SIZE);
     int chk2 = 0;
     while(1){
-
+        fgpi.child_id = -1;
         // to capture ctrl + c
         addsignal();
         // to print prompt

@@ -4,6 +4,8 @@
         "chrono": "c",
         "algorithm": "c",
         "stat.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "commands.h": "c",
+        "shell.h": "c"
     }
 }
