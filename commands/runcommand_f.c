@@ -34,6 +34,9 @@ int runcommand_f(char* words[] , int word_count){
     else if(strcmp(words[0], "sig") == 0){
         rval = sig(words, word_count);
     }
+    else if(strcmp(words[0], "replay") == 0){
+        rval = replay(words, word_count);
+    }
     else if(strcmp(words[0], "fg") == 0){
         rval = fg_p(words, word_count);
     }

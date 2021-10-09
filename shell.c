@@ -112,7 +112,7 @@ int initialise(){
     clear;
     purple();
     printf("\n ************************************************************ \n");
-    printf("   WELCOME TO A REGULAR SHELL EXCLUSIVELY FOR OSN PURPOSES");
+    printf("   wElCoMe To ThE NooooSH");
     printf("\n ************************************************************ \n\n");
     reset_color();
     initHistory();
@@ -602,9 +602,17 @@ int pinfo(char* words[] , int word_count){
 // run all commands
 int runcommand(char* words[] , int word_count){
     int rval = 0;
-    rval = runcommand_f(words, word_count);
-    
 
+    int rd_chk = check_redirection(words, word_count);
+
+    if(rd_chk == 1){
+        manage_redirection(words, word_count);
+    }
+    else{
+    rval = runcommand_f(words, word_count);
+    }
+    
+    // fprintf(stderr, "exited redir\n");
     return rval;
 }
 
@@ -674,6 +682,7 @@ int manageINPUT(char* input){
             }   
 
             int x = runcommand(words_in_line, words);
+            // fprintf(stderr,"here after running\n");
             if(x == 0)
                 addHistory(words_in_line, words);
         }
@@ -715,12 +724,14 @@ int main(){
 
 
     initialise();
+    addsignal();
     char* input = (char*) malloc (INP_SIZE);
     int chk2 = 0;
     while(1){
+        int stdinbkp = dup(STDIN_FILENO);
+        int stdoutbkp = dup(STDOUT_FILENO);
         fgpi.child_id = -1;
-        // to capture ctrl + c
-        addsignal();
+
         // to print prompt
         getPWD();
         
@@ -733,6 +744,8 @@ int main(){
         if(manageINPUT(input) != 0){
             printf("command : error");
         }
+        dup2(stdinbkp, STDIN_FILENO);
+        dup2(stdoutbkp, STDOUT_FILENO);
     }
     free(input);
     return 0;

@@ -12,5 +12,6 @@ int handlepipes(char* input_line , int pipe_count);
 int check_redirection(char* words[] , int word_count);
 int manage_redirection(char* words[] , int word_count);
 int runcommand_f(char* words[] , int word_count);
+int replay(char* words[] , int word_count);
 
 #endif

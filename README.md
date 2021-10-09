@@ -1,28 +1,62 @@
-# NooooSH 
+# __NooooSH__
+#### _A simple shell created using C_
 
-## How to run
+NooooSH is a simple shell made using C with low level Linux system calls
+for OSN Course Monsoon 2021 . Some of its basic functionalities are
+- Common commands like cd,ls ...
+- Piping and Redirection
+- Shell specific commands (will be mentioned in detail later)
 
-run the command 
-    make noooosh
-to create an executable file
-and reun
-    ./nooosh to run the shell
+## Downloading and Running
+To download and run the shell , 
+```sh
+git clone https://github.com/meagoodboy/NooooSH.git
+cd NooooSH
+make
+./noooosh
+```
+or if you have already downloaded the folder containing the shell files, go 
+to that folder ,
+```sh
+make noooosh
+./noooosh
+```
+if the shell is not running or ,if the history is not being initialised
+on running the shell, it is recommended to remove the old history file 
+present in var/tmp and also the old excecutable of the shell
+```sh
+rm -rf noooosh /var/tmp/shell_history.txt 
+```
+## Commands
 
-## Basic info
+These are the few inbuilt commands in the NooooSH:
 
-all the inbuilt function in the shell has their own function in the code except for the commands run by execvp i.e he foreground and background process.
-cerian global variables are defined to keep track of HOME, PWD etc ..
+- ls [-l -a] - to display the files and folders.
+- cd - to change the current working directory.
+- echo - To print text on the shell.
+- pwd - to print the current working directory
+- history - to print the previous commands used
+- jobs [-r -s] - to print the active background jobs in the shell
+- repeat - repeats a command 
+- replay [-command -period -interval] - runs a command after
+very interval until the given period
+- fg - brings a background process to foreground given the process id
+- bg - changes the state of the background process to running given the
+process id
+- sig - sends the given signal to the given process id
+- pinfo - prints the information of the process given the process id
 
-when the shell starts an initialise function initialises the global variables and he control is given to an infinite loop which displays the prompt, the getInput function waits for an input and tthe input is passed to manageinput which convets the input to tokens for easier usage, the runcommand recogonises the function and passes control to the nesessary functions if needed and the command is saved in history. background process ending signal is managed by sighandler function which prints appropriae info about the completed background process. The history is saved in the var/tmp/location/
+## Other features
+- Piping
+- Redirection
+- Running of background process and foreground process (inbuilt and
+other linux commands)
+- signal handling for ctrl+c, ctrl+z, ctrl+d
 
-cntrl+d kills all the child process and kills the terminal
-
-## inbuilt commands
-
-ls
-cd
-echo
-pwd
-pinfo
-history
-exit
+## File structure
+The main runninng code of the shell is present in the file shell.c. And all the header
+files , global variables , global functions are defined in the header file shell.h.
+Each basic command has a file named <command>.c where the functions needed for
+running the command is stored. All the functions present in the commands folder 
+is defined in the header file called commands.h. and its is imported to shell.c for
+the usage
