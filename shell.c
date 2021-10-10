@@ -521,6 +521,7 @@ int bg(char* words[] , int word_count){
     }
     if(pid == 0){
         // printf("\n bg : here4");
+        setpgid(0 ,0);
         int status = execvp(temp_words[0], temp_words);
         if(status < 0){
             perror("\nexecvp ");
@@ -700,7 +701,8 @@ void stophandler(){
     // printf("\nstop handler");
     pid_t pid = fgpi.child_id;
     if (pid != -1){
-    kill(pid, SIGTSTP);
+    // kill(pid, SIGTSTP);
+    // setpgid()
     addchild(pid , fgpi.childname);
     }
     // printf("\n in stop : %d", pid);

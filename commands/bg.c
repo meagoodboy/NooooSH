@@ -8,22 +8,21 @@ int bg_p(char* words[] , int word_count){
         return 1;
     }
 
-    pid_t pid = atoi(words[1]);
+    int pid = atoi(words[1]);
     int found = 0;
 
-    for(int i = 0; i < total_children_bg ; i ++){
-        if(pid == cp[i].child_id){
-            found = 1;
-        }
+    if(pid > total_children_bg + 1 || pid < 1){
+            found = -1;
     }
+    pid --;
 
-    if (found == 0){
+    if (found == -1){
         printf("\n fg : no child in bg with given pid");
         return 1;
     }
-
-    int ret = kill(atoi(words[1]), SIGCONT);
-
+    
+    int ret = kill(cp[pid].child_id, SIGCONT);
+    // fprintf(stderr, "bg continued %d %d", pid , cp[pid].child_id);
     if(ret < 0){
         perror("bg:");
         return 1;

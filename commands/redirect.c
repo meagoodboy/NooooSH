@@ -28,6 +28,18 @@ int manage_redirection(char* words[] , int word_count){
             if(inp_loc == 0) inp_loc = i;
             in_flag = 1;
         }
+        else if(strlen(words[i]) == 2){
+            // fprintf(stderr,"in double ");
+            if(words[i][0] == '>' && words[i][1] == '>'){
+            // fprintf(stderr,"in double 2");
+            file_out = open(words[i+1], O_CREAT | O_APPEND | O_WRONLY, 0644);
+            if(file_out < 0){
+                perror("redirect ");
+            }
+            dup2(file_out, STDOUT_FILENO);
+            if(inp_loc == 0) inp_loc = i;
+            out_flag = 1;
+        }}
         else if(words[i][0] == '>'){
             file_out = open(words[i+1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
             if(file_out < 0){
@@ -37,15 +49,7 @@ int manage_redirection(char* words[] , int word_count){
             if(inp_loc == 0) inp_loc = i;
             out_flag = 1;
         }
-        else if(words[i][0] == '>' && words[i][1] == '>'){
-            file_out = open(words[i+1], O_CREAT | O_APPEND | O_TRUNC, 0644);
-            if(file_out < 0){
-                perror("redirect ");
-            }
-            dup2(file_out, STDOUT_FILENO);
-            if(inp_loc == 0) inp_loc = i;
-            out_flag = 1;
-        }
+
 
     }
     for(int i = 0; i < inp_loc ; i++){

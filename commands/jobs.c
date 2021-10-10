@@ -79,7 +79,9 @@ int jobs(char* words[] , int word_count){
         if(file_stats[2][0] == 'S') {
             statuses[i] = 1;
             cp[indices[i]].status = 1;
-        } 
+        } else{
+            cp[indices[i]].status = 0;
+        }
         fclose(process_info);
         free(proc_path);
         // printf("\nlol 3 : %d", indices[i]);
@@ -87,7 +89,7 @@ int jobs(char* words[] , int word_count){
         // printf("\n in jobs: %s  %d %d",cp[indices[i]].childname,cp[indices[i]].child_id, indices[i] );
 
         if (r_flag == 0 && s_flag == 0){
-            printf("\n%s %s [%d]",(cp[indices[i]].status == 1)?"Running":"Stopped", cp[indices[i]].childname , cp[indices[i]].child_id );
+            printf("\n[%d] %s %s [%d]",indices[i] + 1,(cp[indices[i]].status == 1)?"Running":"Stopped", cp[indices[i]].childname , cp[indices[i]].child_id );
         }
         else if(r_flag == 1){
             if(cp[indices[i]].status == 1){

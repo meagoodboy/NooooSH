@@ -58,4 +58,5 @@
     int pinfo(char* words[] , int word_count);
     int getHistory(char* words[] , int word_count);
     int bg(char* words[] , int word_count);
+    int addchild(int pid, char* command);
 #endif
